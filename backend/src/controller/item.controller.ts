@@ -3,10 +3,10 @@ import {get, omit} from "lodash";
 import {Request, Response} from "express";
 // import Store, {ItemDocument} from "../model/item.model";
 import log from "../logger";
+import {addItem, authenticate, buyItem, deleteItem, getAllItems} from "../service/item.service";
+import {deleteOne, getItems, Item} from "../model/item.model";
 //
 //
-import {addItem, authenticate, buyItem, deleteItem, getAllItems, getItemsByCategory} from "../service/item.service";
-import {ItemDocument} from "../model/item.model";
 
 export async function handleBuyItem(req: Request, res: Response) {
 
@@ -33,28 +33,28 @@ export async function handleBuyItem(req: Request, res: Response) {
 //
 export async function getAllItemsHandler(req: Request, res: Response) {
     try {
-        let items = await getAllItems();
-        return res.send(JSON.stringify(items));
+        // let items = await getAllItems();
+
+        getItems((err: Error, result: Item[]) => {
+            if(err) throw new Error(err.message);
+            return res.send(result);
+        })
+
+
+
+
+        // return res.send(items);
     } catch (error: any) {
         log.error(error.message);
         return res.status(409).send(error.message)
     }
 }
 
-export async function getItemsByCategoryHandler(req: Request, res: Response) {
-    try {
-        let category = get(req, "params.category");
-        let items = await getItemsByCategory({category});
-        return res.send(JSON.stringify(items));
-    } catch (error: any) {
-        log.error(error.message);
-        return res.status(409).send(error.message)
-    }
-}
 //
 export async function addItemHandler(req: Request, res: Response) {
     try {
         let newItem = {
+            id: 1,
             name: req.body.name,
             price: req.body.price,
             icon: req.body.icon,
@@ -62,14 +62,16 @@ export async function addItemHandler(req: Request, res: Response) {
             category: req.body.category
         }
 
-        let item = await addItem(newItem, req.body.adminSecret) as ItemDocument;
+        let item = addItem(newItem, req.body.adminSecret);
 
 
-        if(item) {
-            return res.send(item.toJSON());
-        } else {
-            return res.send({"message": "You're not admin"})
+        if(item == null) {
+            return res.send({"message": "Problem inserting your item"})
+
         }
+
+        return res.send({"name": newItem.name});
+
 
     } catch (error: any) {
         log.error(error.message);
@@ -81,13 +83,16 @@ export async function deleteItemHandler(req: Request, res: Response) {
     try {
 
         let adminSecret = req.body.adminSecret;
-        let itemName = req.body.name;
-        let item = await deleteItem(itemName, adminSecret);
-        if(item) {
-            return res.sendStatus(200)
-        } else {
-            return res.send({"message": "You're not admin"})
-        }
+        let name = req.body.name;
+
+
+        if(adminSecret !== process.env.ADMIN_PASSWORD as string) return res.send({"message": "You're not admin"});
+
+        deleteOne(name, (err: Error) => {
+            if(err) throw new Error(err.message);
+        })
+
+        return res.sendStatus(200)
 
     } catch (error: any) {
         log.error(error.message);
