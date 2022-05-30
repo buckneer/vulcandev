@@ -2,7 +2,6 @@ import express from 'express';
 import "dotenv/config"
 import cors from "cors";
 import log from './logger';
-import connect from "./db/connect";
 import routes from "./routes";
 
 const port = parseInt(process.env.PORT as string) as number;
