@@ -1,26 +1,20 @@
-import Item, {ItemDocument} from "../model/item.model"
-import {DocumentDefinition, FilterQuery} from "mongoose";
+
 import log from "../logger";
 import {create, StoreItem} from "../model/storeitem.model";
 import "dotenv/config"
+import {createNewItem, deleteOne, getItems, Item} from "../model/item.model";
 
 export async function getAllItems() {
-    try {
-        let items = await Item.find() as ItemDocument[];
-        return items;
-    } catch (e: any) {
-        throw new Error(e);
-    }
+    let items : Item[] = []
+    getItems((err: Error, result: Item[]) => {
+        if(err) return null;
+        console.log(result)
+        items = [...result]
+    })
+
+    return items;
 }
 
-export async function getItemsByCategory(query: FilterQuery<ItemDocument>) {
-    try {
-        let items = await Item.find(query) as ItemDocument[];
-        return items
-    } catch (e: any) {
-        throw new Error(e);
-    }
-}
 
 export async function authenticate(adminSecret: string) {
     try {
@@ -30,30 +24,23 @@ export async function authenticate(adminSecret: string) {
     }
 }
 
-export async function addItem(input: DocumentDefinition<ItemDocument>, adminSecret: string) {
-    try {
+export async function addItem(input: Item, adminSecret: string) {
 
-        if(adminSecret === process.env.ADMIN_PASSWORD as string) {
-            return Item.create(input);
-        } else {
-            return null;
-        }
-    } catch (e: any) {
-        throw new Error(e);
-    }
+
+    if(adminSecret !== process.env.ADMIN_PASSWORD as string) return null;
+
+    createNewItem(input, (err: Error, result: Item) => {
+        if(err) return null;
+        return result;
+    })
 }
 
-export async function deleteItem(itemName: string, adminSecret: string) {
-    try {
-
-        if(adminSecret === process.env.ADMIN_PASSWORD as string) {
-            return await Item.deleteOne({name: itemName});
-        } else {
-            return null;
-        }
-    } catch (e: any) {
-        throw new Error(e)
-    }
+export async function deleteItem(name: string, adminSecret: string) {
+    if(adminSecret === process.env.ADMIN_PASSWORD as string) return null;
+    // return await Item.deleteOne({name: itemName});
+    deleteOne(name, (err: any) => {
+        if(err) return null;
+    })
 }
 
 export async function buyItem(itemName: string, username: string, itemNumber: number) {
@@ -82,7 +69,3 @@ export async function buyItem(itemName: string, username: string, itemNumber: nu
 
 }
 
-
-export function findItem(query: FilterQuery<ItemDocument>) {
-    return Item.findOne(query);
-}
